@@ -138,9 +138,13 @@ class Terminal {
             let fitAddon = new FitAddon();
             this.term.loadAddon(fitAddon);
             this.term.open(document.getElementById(opts.parentId));
-            this.term.loadAddon(new WebglAddon());
-            let ligaturesAddon = new LigaturesAddon();
-            this.term.loadAddon(ligaturesAddon);
+            // arm64 fork: no WebGL/canvas addon loaded → xterm 5 uses its DOM renderer. With GPU
+            // compositing active on Electron 31, it is responsive, and it sidesteps the bundled
+            // WebGL addon's quirks on Chromium 126. (The earlier "light terminal" was unrelated —
+            // it was augmented-ui's ::after border layer; fixed in main_shell.css.)
+            // arm64 fork: the ligatures addon does synchronous font shaping on every render,
+            // which stalls the terminal during rapid output (e.g. a held key). Disabled.
+            // (was: this.term.loadAddon(new LigaturesAddon());)
             this.term.attachCustomKeyEventHandler(e => {
                 window.keyboard.keydownHandler(e);
                 return true;
@@ -317,7 +321,7 @@ class Terminal {
             this._disableCWDtracking = false;
             this._getTtyCWD = tty => {
                 return new Promise((resolve, reject) => {
-                    let pid = tty._pid;
+                    let pid = tty.pid;
                     switch(require("os").type()) {
                         case "Linux":
                             require("fs").readlink(`/proc/${pid}/cwd`, (e, cwd) => {
@@ -344,7 +348,7 @@ class Terminal {
             };
             this._getTtyProcess = tty => {
                 return new Promise((resolve, reject) => {
-                    let pid = tty._pid;
+                    let pid = tty.pid;
                     switch(require("os").type()) {
                         case "Linux":
                         case "Darwin":
@@ -456,7 +460,7 @@ class Terminal {
                 }
             });
             this.wss.on("connection", ws => {
-                this.onopened(this.tty._pid);
+                this.onopened(this.tty.pid);
                 ws.on("close", (code, reason) => {
                     this.ondisconnected(code, reason);
                 });

@@ -1,166 +1,89 @@
 <p align="center">
-  <br>
-  <img alt="Logo" src="media/logo.png">
+  <img alt="eDEX-UI" src="media/logo.png">
   <br><br>
-  <a href="https://lgtm.com/projects/g/GitSquared/edex-ui/context:javascript"><img alt="undefined" src="https://img.shields.io/lgtm/grade/javascript/g/GitSquared/edex-ui.svg?logo=lgtm&logoWidth=18"/></a>
+  <strong>eDEX-UI — native Apple Silicon (arm64) build</strong>
   <br>
-  <a href="https://github.com/GitSquared/edex-ui/releases/latest"><img alt="undefined" src="https://img.shields.io/github/release/GitSquared/edex-ui.svg?style=popout"></a>
-  <a href="#featured-in"><img alt="undefined" src="https://img.shields.io/github/downloads/GitSquared/edex-ui/total.svg?style=popout"></a>
-  <a href="https://github.com/GitSquared/edex-ui/blob/master/LICENSE"><img alt="undefined" src="https://img.shields.io/github/license/GitSquared/edex-ui.svg?style=popout"></a>
-  <br>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-Windows.exe" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/Windows/?color=blue&icon=windows&label"></a>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-macOS.dmg" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/macOS/?color=grey&icon=apple&label"></a>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-Linux-x86_64.AppImage" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/Linux64/?color=orange&icon=terminal&label"></a>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-Linux-arm64-AppImage" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/LinuxArm64/?color=orange&icon=terminal&label"></a>
-  <a href="https://aur.archlinux.org/packages/edex-ui" target="_blank"><img alt="undefined" src="https://badgen.net/badge/AUR/Package/cyan"></a>
-  <br>
-  <a href="https://github.com/GitSquared/edex-ui/releases/tag/v2.2.8"><strong><i>(Project archived oct. 18th 2021)</i></strong></a>
-  <br><br><br>
+  <em>A maintained fork of the archived <a href="https://github.com/GitSquared/edex-ui">GitSquared/eDEX-UI</a>, rebuilt to run natively on Apple Silicon Macs.</em>
 </p>
-
-eDEX-UI is a fullscreen, cross-platform terminal emulator and system monitor that looks and feels like a sci-fi computer interface.
 
 ---
 
-<a href="https://youtu.be/BGeY1rK19zA">
-  <img align="right" width="400" alt="Demo on YouTube" src="media/youtube-demo-teaser.gif">
-</a>
+## Why this fork exists
 
-Heavily inspired from the [TRON Legacy movie effects](https://web.archive.org/web/20170511000410/http://jtnimoy.com/blogs/projects/14881671) (especially the [Board Room sequence](https://gmunk.com/TRON-Board-Room)), the eDEX-UI project was originally meant to be *"[DEX-UI](https://github.com/seenaburns/dex-ui) with less « art » and more « distributable software »"*.
+[eDEX-UI](https://github.com/GitSquared/edex-ui) is a fullscreen, sci-fi terminal emulator + system monitor. The original project was **archived in October 2021** and only ever shipped an **x86-only** macOS build (Electron 12 / Chromium 89).
 
-While keeping a futuristic look and feel, it strives to maintain a certain level of functionality and to be usable in real-life scenarios, with the larger goal of bringing science-fiction UXs to the mainstream.
+On modern Apple Silicon (M-series) Macs that build:
 
-<br>
+- runs under **Rosetta 2** translation, and
+- its old Chromium **cannot use the GPU** (Metal) on a recent macOS, so it falls back to **100% software rendering**.
 
-It might or might not be a joke taken too seriously.
+The result on an M-series Mac is unusable: ~6.5 CPU cores pinned at idle, severe stutter/freeze on keyboard input, and a meltdown of the whole system. No native arm64 build of eDEX-UI existed anywhere — the upstream arm64 CI was disabled right before the project was archived.
 
+**This fork is a native arm64 build with the app modernised enough to run well on Apple Silicon.**
 
----
+### Measured difference (Apple M5, macOS 26)
 
-<p align="center">
-  <em>Jump to: <br><a href="#features">Features</a> — <a href="#screenshots">Screenshots</a> — <a href="#qa">Questions & Answers</a> — <strong><a href="#how-do-i-get-it">Download</a></strong> — <a href="#featured-in">Featured In</a> — <a href="#useful-commands-for-the-nerds">Contributor Instructions</a> — <a href="#credits">Credits</a></em>
-</p>
+| Build | Idle CPU | Input |
+|---|---|---|
+| Upstream x86 (Rosetta, Electron 12) | ~653% (6.5 cores) | freezes on key-hold |
+| **This fork (native arm64, Electron 31)** | **~30% (0.3 cores)** | smooth |
 
-## Sponsor
+## What changed vs upstream
 
-**Want to help support my open-source experiments and learn some cool JavaScript tricks at the same time?**
+- **Electron 12 → 31.7.7** — modern Chromium uses **Metal/GPU** on Apple Silicon, which fixes both the idle-CPU meltdown and the input freeze (the original problem was software rasterisation).
+- **`@electron/remote`** wired up properly — Electron 14+ removed the built-in `remote` module; renderer code migrated from `electron.remote.*` to the `@electron/remote` module + `remote.enable()` on the window.
+- **node-pty 0.10 → 1.1** — rebuilt for the Electron 31 Node ABI (arm64).
+- **xterm 4.14 → 5.3** + addons.
+- **Terminal pane no longer renders white/inverted** — augmented-ui 1.1.2's `::after` border layer mis-clips on Chromium 126 and floods the terminal with the light border colour; disabled it for `#main_shell` and restored a thin CSS border.
+- **Network status no longer stuck OFFLINE behind a VPN** — the connectivity check no longer force-binds the ping socket to a specific interface IP (which fails when the default route is a VPN `utun` tunnel with no MAC); it now lets the OS route normally.
+- Minor input-path tidy-ups (skip the on-screen-keyboard repaint on key auto-repeat; the ligatures addon is not loaded).
 
-Click the banner below and sign up to **Bytes**, the only newsletter cool enough to be recommended by eDEX-UI.
+## Download
 
-[![Bytes by UI.dev](media/sponsor-uidev-bytes.jpg)](https://ui.dev/bytes/?r=gabriel)
+A prebuilt, **native arm64** `.dmg` is attached to the [latest release](../../releases/latest).
 
-## Features
-- Fully featured terminal emulator with tabs, colors, mouse events, and support for `curses` and `curses`-like applications.
-- Real-time system (CPU, RAM, swap, processes) and network (GeoIP, active connections, transfer rates) monitoring.
-- Full support for touch-enabled displays, including an on-screen keyboard.
-- Directory viewer that follows the CWD (current working directory) of the terminal.
-- Advanced customization using themes, on-screen keyboard layouts, CSS injections. See the [wiki](https://github.com/GitSquared/edex-ui/wiki) for more info.
-- Optional sound effects made by a talented sound designer for maximum hollywood hacking vibe.
+The build is **unsigned** (no Apple Developer certificate), so on first launch macOS Gatekeeper will block it. To open it:
 
-## Screenshots
-![Default screenshot](media/screenshot_default.png)
+```sh
+xattr -cr "/Applications/eDEX-UI.app"
+```
 
-_[neofetch](https://github.com/dylanaraps/neofetch) on eDEX-UI 2.2 with the default "tron" theme & QWERTY keyboard_
+…or right-click the app → **Open** → **Open**.
 
-![Blade screenshot](media/screenshot_blade.png)
+## Build from source
 
-_Checking out available themes in [eDEX's config dir](https://github.com/GitSquared/edex-ui/wiki/userData) with [`ranger`](https://github.com/ranger/ranger) on eDEX-UI 2.2 with the "blade" theme_
+Tested on an Apple Silicon Mac, macOS 26. The non-obvious bits are the toolchain versions — the project's build tooling is from 2021 and needs era-appropriate Node + a Python that still ships `distutils`.
 
-![Disrupted screenshot](media/screenshot_disrupted.png)
+```sh
+# Tooling (via Homebrew + fnm)
+brew install fnm python@3.11
+fnm install 20.18.1
+export PYTHON="$(brew --prefix python@3.11)/libexec/bin/python"   # node-gyp needs distutils (gone in Python 3.12+)
 
-_[cmatrix](https://github.com/abishekvashok/cmatrix) on eDEX-UI 2.2 with the experimental "tron-disrupted" theme, and the user-contributed DVORAK keyboard_
+git clone --recurse-submodules https://github.com/pydantick/edex-ui-arm64.git
+cd edex-ui-arm64
 
-![Horizon screenshot](media/screenshot_horizon.png)
+# Install deps under Node 20
+fnm exec --using=20.18.1 -- npm install
+fnm exec --using=20.18.1 -- bash -c 'cd src && npm install'
 
-_Editing eDEX-UI source code with `nvim` on eDEX-UI 2.2 with the custom [`horizon-full`](https://github.com/GitSquared/horizon-edex-theme) theme_
+# Rebuild node-pty for the Electron ABI (arm64)
+fnm exec --using=20.18.1 -- npx @electron/rebuild -v 31.7.7 -a arm64 -m ./src -w node-pty -f
 
-## Q&A
-#### How do I get it?
-Click on the little badges under the eDEX logo at the top of this page, or go to the [Releases](https://github.com/GitSquared/edex-ui/releases) tab, or download it through [one of the available repositories](https://repology.org/project/edex-ui/versions) (Homebrew, AUR...).
+# Run
+fnm exec --using=20.18.1 -- npm start
 
-Public release binaries are unsigned ([why](https://gaby.dev/posts/code-signing)). On Linux, you will need to `chmod +x` the AppImage file in order to run it.
-#### I have a problem!
-Search through the [Issues](https://github.com/GitSquared/edex-ui/issues) to see if yours has already been reported. If you're confident it hasn't been reported yet, feel free to open up a new one. If you see your issue and it's been closed, it probably means that the fix for it will ship in the next version, and you'll have to wait a bit.
-#### Can you disable the keyboard/the filesystem display?
-You can't disable them (yet) but you can hide them. See the `tron-notype` theme.
-#### Why is the file browser saying that "Tracking Failed"? (Windows only)
-On Linux and macOS, eDEX tracks where you're going in your terminal tab to display the content of the current folder on-screen.
-Sadly, this is technically impossible to do on Windows right now, so the file browser reverts back to a "detached" mode. You can still use it to browse files & directories and click on files to input their path in the terminal.
-#### Can this run on a Raspberry Pi / ARM device?
-We provide prebuilt arm64 builds. For other platforms, see [this issue comment](https://github.com/GitSquared/edex-ui/issues/313#issuecomment-443465345), and the thread on issue [#818](https://github.com/GitSquared/edex-ui/issues/818).
-#### Is this repo actively maintained?
-No, after a 3 years run, this project has been archived. See the [announcement](https://github.com/GitSquared/edex-ui/releases/tag/v2.2.8).
-#### How did you make this?
-Glad you're interested! See [#272](https://github.com/GitSquared/edex-ui/issues/272).
-#### This is so cool.
-Thanks! If you feel like it, you can [follow me on Twitter](https://gaby.dev/twitter) to hear about new stuff I'm making.
+# Package a native arm64 .app
+fnm exec --using=20.18.1 -- npx @electron/packager ./src "eDEX-UI" \
+  --platform=darwin --arch=arm64 --electron-version=31.7.7 \
+  --out=./dist --overwrite --prune=false --icon=./media/icon.icns
+```
 
-<img width="220" src="https://78.media.tumblr.com/35d4ef4447e0112f776b629bffd99188/tumblr_mk4gf8zvyC1s567uwo1_500.gif" />
+> Submodules use SSH URLs; if you don't have SSH keys set up, prefix git with
+> `-c url."https://github.com/".insteadOf="git@github.com:"`.
 
+## Credits & license
 
-## Featured in...
-- [Linux Uprising Blog](https://www.linuxuprising.com/2018/11/edex-ui-fully-functioning-sci-fi.html)
-- [My post on r/unixporn](https://www.reddit.com/r/unixporn/comments/9ysbx7/oc_a_little_project_that_ive_been_working_on/)
-- [Korben article (in french)](https://korben.info/une-interface-futuriste-pour-vos-ecrans-tactiles.html)
-- [Hacker News](https://news.ycombinator.com/item?id=18509828)
-- [This tweet that made me smile](https://twitter.com/mikemaccana/status/1065615451940667396)
-- [BoingBoing article](https://boingboing.net/2018/11/23/simulacrum-sf.html) - Apparently i'm a "French hacker"
-- [OReilly 4 short links](https://www.oreilly.com/ideas/four-short-links-23-november-2018)
-- [Hackaday](https://hackaday.com/2018/11/23/look-like-a-movie-hacker/)
-- [Developpez.com (another french link)](https://www.developpez.com/actu/234808/Une-application-de-bureau-ressemble-a-une-interface-d-ordinateur-de-science-fiction-inspiree-des-effets-du-film-TRON-Legacy/)
-- [GitHub Blog's Release Radar November 2018](https://blog.github.com/2018-12-21-release-radar-november-2018/)
-- [opensource.com Productive Tools for 2019](https://opensource.com/article/19/1/productivity-tool-edex-ui)
-- [O'Reilly 4 short links (again)](https://www.oreilly.com/radar/four-short-links-7-july-2020/)
-- [LinuxLinks](https://www.linuxlinks.com/linux-candy-edex-ui-sci-fi-computer-terminal-emulator-system-monitor/)
-- [Linux For Everyone (Youtube)](https://www.youtube.com/watch?v=gbzqCAjm--g)
-- [BestOfJS Rising Stars 2020](https://risingstars.js.org/2020/en#edex-ui)
-- [The Geek Freaks (Youtube/German)](https://youtu.be/TSjMIeLG0Sk)
-- [JSNation Open Source Awards 2021](https://osawards.com/javascript/#nominees) (Nominee - Fun Side Project of the Year)
+All credit for eDEX-UI goes to **[Gabriel "Squared" SAILLARD](https://github.com/GitSquared)** and the original [eDEX-UI contributors](https://github.com/GitSquared/edex-ui/graphs/contributors). This fork only modernises the build for Apple Silicon.
 
-
-## Useful commands for the nerds
-
-**IMPORTANT NOTE:** the following instructions are meant for running eDEX from the latest unoptimized, unreleased, development version. If you'd like to get stable software instead, refer to [these](#how-do-i-get-it) instructions.
-
-#### Starting from source:
-on *nix systems (You'll need the Xcode command line tools on macOS):
-- clone the repository
-- `npm run install-linux`
-- `npm run start`
-
-on Windows:
-- start cmd or powershell **as administrator**
-- clone the repository
-- `npm run install-windows`
-- `npm run start`
-
-#### Building
-Note: Due to native modules, you can only build targets for the host OS you are using.
-
-- `npm install` (NOT `install-linux` or `install-windows`)
-- `npm run build-linux` or `build-windows` or `build-darwin`
-
-The script will minify the source code, recompile native dependencies and create distributable assets in the `dist` folder.
-
-#### Getting the bleeding edge
-If you're interested in running the latest in-development version but don't want to compile source code yourself, you can can get pre-built nightly binaries on [GitHub Actions](https://github.com/GitSquared/edex-ui/actions): click the latest commits, and download the artifacts bundle for your OS.
-
-## Credits
-eDEX-UI's source code was primarily written by me, [Squared](https://github.com/GitSquared). If you want to get in touch with me or find other projects I'm involved in, check out [my website](https://gaby.dev).
-
-[PixelyIon](https://github.com/PixelyIon) helped me get started with Windows compatibility and offered some precious advice when I started to work on this project seriously.
-
-[IceWolf](https://soundcloud.com/iamicewolf) composed the sound effects on v2.1.x and above. He makes really cool stuff, check out his music!
-
-## Thanks
-Of course, eDEX would never have existed if I hadn't stumbled upon the amazing work of [Seena](https://github.com/seenaburns) on [r/unixporn](https://reddit.com/r/unixporn).
-
-This project uses a bunch of open-source libraries, frameworks and tools, see [the full dependency graph](https://github.com/GitSquared/edex-ui/network/dependencies).
-
-I want to namely thank the developers behind [xterm.js](https://github.com/xtermjs/xterm.js), [systeminformation](https://github.com/sebhildebrandt/systeminformation) and [SmoothieCharts](https://github.com/joewalnes/smoothie).
-
-Huge thanks to [Rob "Arscan" Scanlon](https://github.com/arscan) for making the fantastic [ENCOM Globe](https://github.com/arscan/encom-globe), also inspired by the TRON: Legacy movie, and distributing it freely. His work really puts the icing on the cake.
-
-## Licensing
-
-Licensed under the [GPLv3.0](https://github.com/GitSquared/edex-ui/blob/master/LICENSE).
+Licensed under **GPL-3.0**, same as upstream — see [LICENSE](LICENSE).

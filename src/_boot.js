@@ -18,6 +18,7 @@ process.on("uncaughtException", e => {
 });
 
 signale.start(`Starting eDEX-UI v${app.getVersion()}`);
+signale.info("[ARM64-FORK] patched build loaded — audio/webgl/ligatures/keyboard tweaks active");
 signale.info(`With Node ${process.versions.node} and Electron ${process.versions.electron}`);
 signale.info(`Renderer is Chrome ${process.versions.chrome}`);
 
@@ -202,6 +203,8 @@ function createWindow(settings) {
             experimentalFeatures: settings.experimentalFeatures || false
         }
     });
+
+    require('@electron/remote/main').enable(win.webContents);
 
     win.loadURL(url.format({
         pathname: path.join(__dirname, 'ui.html'),

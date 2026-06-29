@@ -300,6 +300,12 @@ class Keyboard {
             if (e.code === "CapsLock" && this.container.dataset.isCapsLckOn !== "true") this.container.dataset.isCapsLckOn = true;
             if (e.code === "CapsLock" && this.container.dataset.isCapsLckOn === "true") this.container.dataset.isCapsLckOn = false;
 
+            // arm64 fork: on auto-repeat (held key) the on-screen key is already highlighted.
+            // Re-running findKey() querySelectors + setAttribute (and the sound below) on every
+            // repeat event stalls input. The actual character still reaches the terminal via
+            // xterm's own key handler, so skipping the visual work here is safe.
+            if (e.repeat === true) return;
+
             let key = findKey(e);
             if (key === null) return;
             if (key.length) {

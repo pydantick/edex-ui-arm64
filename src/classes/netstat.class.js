@@ -105,7 +105,7 @@ class Netstat {
                 offline = true;
             } else {
                 if (this.runsBeforeGeoIPUpdate === 0 && this.lastconn.finished) {
-                    this.lastconn = require("https").get({host: "myexternalip.com", port: 443, path: "/json", localAddress: net.ip4, agent: this._httpsAgent}, res => {
+                    this.lastconn = require("https").get({host: "myexternalip.com", port: 443, path: "/json", agent: this._httpsAgent}, res => {
                         let rawData = "";
                         res.on("data", chunk => {
                             rawData += chunk;
@@ -158,10 +158,12 @@ class Netstat {
             let s = new require("net").Socket();
             let start = process.hrtime();
 
+            // arm64 fork: do NOT bind to a specific source IP. eDEX picks the first interface with a MAC
+            // (e.g. en7), but with a VPN the default route is a utun tunnel (no MAC) — binding the socket
+            // to en7's IP then fails, so eDEX wrongly shows OFFLINE. Letting the OS route fixes it.
             s.connect({
                 port,
                 host: target,
-                localAddress: local,
                 family: 4
             }, () => {
                 let time_arr = process.hrtime(start);

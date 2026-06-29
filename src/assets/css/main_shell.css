@@ -8,6 +8,12 @@ section#main_shell {
     --aug-border: 0.18vh;
     --aug-border-bg: rgb(var(--color_r), var(--color_g), var(--color_b));
     --aug-border-opacity: 0.5;
+    /* arm64 fork: on Chromium 126 augmented-ui 1.1.2's border layer (::after, light --aug-border-bg)
+       fills the whole pane instead of just the border ring, making the terminal appear light. Defining
+       the inset layer (as eDEX's modals do) restores correct clipping → thin light border + dark fill. */
+    --aug-inset: 5px;
+    --aug-inset-bg: var(--color_light_black);
+    background-color: var(--color_light_black);
 
     display: flex;
     flex-direction: column;
@@ -16,6 +22,17 @@ section#main_shell {
     overflow: hidden;
 
     transition: width .5s cubic-bezier(0.85, 0.5, 0.85, 0.5), height .5s cubic-bezier(0.85, 0.5, 0.85, 0.5);
+}
+
+/* arm64 fork: augmented-ui 1.1.2's ::after border layer mis-clips on Chromium 126 and fills the whole
+   terminal pane with the light --aug-border-bg colour. Disable it — the element's dark background and
+   clip-path keep the correct dark, notched terminal. A real CSS border restores a thin frame outline. */
+section#main_shell::after {
+    display: none !important;
+}
+section#main_shell {
+    border: 0.13vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    box-sizing: border-box;
 }
 
 h1#main_shell_greeting {
