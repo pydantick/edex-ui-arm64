@@ -42,13 +42,15 @@ The result on an M-series Mac is unusable: ~6.5 CPU cores pinned at idle, severe
 
 A prebuilt, **native arm64** `.dmg` is attached to the [latest release](../../releases/latest).
 
-The build is **unsigned** (no Apple Developer certificate), so on first launch macOS Gatekeeper will block it. To open it:
+The build is **ad-hoc signed but not notarized** (this is a free fork — no paid Apple Developer account), so macOS quarantines it after download. Drag **eDEX-UI.app** into `/Applications`, then run once in Terminal:
 
 ```sh
 xattr -cr "/Applications/eDEX-UI.app"
 ```
 
-…or right-click the app → **Open** → **Open**.
+Then open it normally.
+
+> If you skip that step macOS says **"eDEX-UI is damaged and can't be opened"** — that message means the *download-quarantine* flag, **not** actual corruption. `xattr -cr` removes the flag; the app itself is fine.
 
 ## Build from source
 
